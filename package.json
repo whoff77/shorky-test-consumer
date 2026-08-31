@@ -1,0 +1,16 @@
+{
+  "name": "shorky-test-consumer",
+  "version": "1.0.0",
+  "description": "Sample consumer project demonstrating Shorky's AI-powered auto-healing GitHub Action against a Playwright test suite.",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^20.14.9",
+    "typescript": "^5.5.3"
+  },
+  "license": "MIT"
+}

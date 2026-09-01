@@ -43,7 +43,7 @@ jobs:
       #    pull request with the proposed fix.
       - name: Run Shorky Auto-Healer
         if: failure()
-        uses: whoff77/shorky@v1.0.0
+        uses: whoff77/shorky@v1.0.1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

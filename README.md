@@ -23,6 +23,7 @@ GitHub Action end-to-end, consumed as a published marketplace action
 ## Prerequisites
 
 * Node.js v18+
+* **GitHub Repository Settings (for Auto-Healing PRs):** Navigate to your repository **Settings > Actions > General > Workflow permissions** and ensure **"Allow GitHub Actions to create and approve pull requests"** is checked.
 * A GitHub repository with the following secrets configured under
   **Settings > Secrets and variables > Actions**:
   * `OPENAI_API_KEY` — an OpenAI API key used by Shorky to generate the fix.
@@ -61,7 +62,7 @@ See [`.github/workflows/test.yml`](.github/workflows/test.yml):
 
 ## Project structure
 
-```text
+```
 shorky-test-consumer/
 ├── .github/
 │   └── workflows/

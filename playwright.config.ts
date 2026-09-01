@@ -33,6 +33,12 @@ export default defineConfig({
     ['json', { outputFile: 'test-results/report.json' }],
   ],
 
+  /* Store visual regression snapshots without an OS-specific suffix so the
+   * baseline captured locally (macOS) is still compared pixel-for-pixel in
+   * CI (Linux) instead of being reported as "missing snapshot". This keeps
+   * the intentional visual discrepancy test a true pixel-diff failure. */
+  snapshotPathTemplate: '{testDir}/{testFileDir}/{testFileName}-snapshots/{arg}{ext}',
+
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('')`. */

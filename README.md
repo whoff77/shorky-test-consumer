@@ -9,13 +9,27 @@ GitHub Action end-to-end, consumed as a published marketplace action
 
 1. Runs a small Playwright suite against a public demo site
    (`the-internet.herokuapp.com`).
-2. `tests/broken-login.spec.ts` is **intentionally broken** — it targets
-   locators that don't exist on the page (`XXXUsername` / `XXXPassword`
-   labels) so the test reliably fails in CI.
+2. Three spec files are **intentionally broken** to exercise different
+   failure categories Shorky needs to be able to heal:
+   - `tests/broken-login.spec.ts` — **DOM interaction failure**: targets
+     locators that don't exist on the login page (`XXXUsername` /
+     `XXXPassword` labels).
+   - `tests/broken-dynamic-form.spec.ts` — **DOM interaction failure**:
+     targets a checkbox on the
+     [Checkboxes](https://the-internet.herokuapp.com/checkboxes) example
+     page via a non-existent `#checkbox-1` id (the real inputs have no
+     `id` attribute at all).
+   - `tests/visual-login.spec.ts` — **visual regression failure**: captures
+     a screenshot of the login page and compares it against a committed
+     baseline (`tests/visual-login.spec.ts-snapshots/login-page-baseline.png`),
+     but first injects an intentional visual discrepancy (a red banner and a
+     recolored login button) via `page.evaluate`, so the pixel comparison
+     reliably fails with a real image diff.
 3. When the suite fails, `.github/workflows/test.yml` invokes the published
    `whoff77/shorky@v1.1.0` GitHub Action, which:
    - Parses the Playwright JSON report (`test-results/report.json`) to find
-     failed tests and their `trace.zip` attachments.
+     failed tests and their `trace.zip` / screenshot / visual-diff
+     attachments.
    - Sends the failure context to an LLM (via `OPENAI_API_KEY`) to generate
      a corrected spec.
    - Opens an auto-healing pull request with the fix using `GITHUB_TOKEN`.
@@ -66,9 +80,13 @@ See [`.github/workflows/test.yml`](.github/workflows/test.yml):
 shorky-test-consumer/
 ├── .github/
 │   └── workflows/
-│       └── test.yml          # CI: run Playwright + Shorky auto-healer
+│       └── test.yml                    # CI: run Playwright + Shorky auto-healer
 ├── tests/
-│   └── broken-login.spec.ts  # Intentionally failing sample test
+│   ├── broken-login.spec.ts            # DOM interaction failure (broken locators)
+│   ├── broken-dynamic-form.spec.ts     # DOM interaction failure (checkboxes page)
+│   ├── visual-login.spec.ts            # Visual regression failure (screenshot diff)
+│   └── visual-login.spec.ts-snapshots/
+│       └── login-page-baseline.png     # Committed clean baseline snapshot
 ├── playwright.config.ts      # Playwright configuration (trace: retain-on-failure)
 ├── tsconfig.json
 └── package.json

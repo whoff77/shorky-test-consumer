@@ -3,7 +3,7 @@
 A minimal Node.js + TypeScript + Playwright project used to validate
 [Shorky](https://github.com/whoff77/shorky)'s AI-powered auto-healing
 GitHub Action end-to-end, consumed as a published marketplace action
-(`whoff77/shorky@v1.3.0`).
+(`whoff77/shorky@v1.3.1`).
 
 ## What this project does
 
@@ -26,7 +26,7 @@ GitHub Action end-to-end, consumed as a published marketplace action
      recolored login button) via `page.evaluate`, so the pixel comparison
      reliably fails with a real image diff.
 3. When the suite fails, `.github/workflows/test.yml` invokes the published
-   `whoff77/shorky@v1.3.0` GitHub Action, which:
+   `whoff77/shorky@v1.3.1` GitHub Action, which:
    - Parses the Playwright JSON report (`test-results/report.json`) to find
      failed tests and their `trace.zip` / screenshot / visual-diff
      attachments.
@@ -82,7 +82,7 @@ See [`.github/workflows/test.yml`](.github/workflows/test.yml):
 1. Checks out the repo and installs dependencies + Chromium.
 2. Runs `npx playwright test --reporter=json,list`, writing
    `test-results/report.json`.
-3. On failure, runs `whoff77/shorky@v1.3.0` with `openai-api-key` and
+3. On failure, runs `whoff77/shorky@v1.3.1` with `openai-api-key` and
    `github-token` inputs to trigger the auto-healing pull request.
 4. Always uploads the Playwright HTML report as a build artifact.
 

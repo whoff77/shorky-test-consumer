@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [ main ]
 
-# Shorky's auto-healer needs to push a new branch and open a pull request
-# using GITHUB_TOKEN, which requires both of these permissions explicitly
-# granted (the default token is otherwise read-only for contents/PRs).
 permissions:
   contents: write
   pull-requests: write
@@ -17,6 +14,9 @@ jobs:
   test:
     timeout-minutes: 15
     runs-on: ubuntu-latest
+    env:
+      SHORKY_CLOUD_URL: ${{ vars.SHORKY_CLOUD_URL }}
+      SHORKY_CLOUD_API_KEY: ${{ secrets.SHORKY_CLOUD_API_KEY }}
 
     steps:
       - name: Checkout repository
@@ -36,28 +36,27 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chrome
 
-      # 1. Run the Playwright suite with JSON reporting enabled so Shorky can
-      #    parse failures + locate trace.zip attachments afterward.
+      # 1. Run the Playwright suite (relying on playwright.config.ts for reporters,
+      # ensuring cloudReporter and JSON output are both active)
       - name: Run Playwright Tests
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: "test-results/report.json"
         run: |
           mkdir -p test-results
-          npx playwright test --project="Google Chrome" --reporter=json,list
+          npx playwright test --project="Google Chrome"
 
-      # 2. On failure, invoke the published Shorky marketplace action to
-      #    analyze the failed trace(s) with an LLM and open an auto-healing
-      #    pull request with the proposed fix.
+      # 2. On failure, invoke the published Shorky marketplace action
       - name: Run Shorky Auto-Healer
         if: failure()
         uses: whoff77/shorky@v1.3.1
         with:
+          shorky-cloud-url: ${{ env.SHORKY_CLOUD_URL }}
+          shorky-cloud-api-key: ${{ env.SHORKY_CLOUD_API_KEY }}
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           report-path: "test-results/report.json"
 
-      # 3. Always upload the HTML report + traces as a build artifact for
-      #    manual inspection, regardless of pass/fail.
+      # 3. Always upload the HTML report + traces as a build artifact
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
@@ -66,9 +65,7 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
-      # 4. Always upload the raw test-results/ directory (trace.zip files,
-      #    failure screenshots, and visual regression diff images) so
-      #    failures can be inspected directly without re-running the suite.
+      # 4. Always upload the raw test-results/ directory
       - name: Upload test artifacts (traces, screenshots, visual diffs)
         if: always()
         uses: actions/upload-artifact@v4

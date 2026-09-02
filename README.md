@@ -3,7 +3,7 @@
 A minimal Node.js + TypeScript + Playwright project used to validate
 [Shorky](https://github.com/whoff77/shorky)'s AI-powered auto-healing
 GitHub Action end-to-end, consumed as a published marketplace action
-(`whoff77/shorky@v1.2.0`).
+(`whoff77/shorky@v1.3.0`).
 
 ## What this project does
 
@@ -26,18 +26,25 @@ GitHub Action end-to-end, consumed as a published marketplace action
      recolored login button) via `page.evaluate`, so the pixel comparison
      reliably fails with a real image diff.
 3. When the suite fails, `.github/workflows/test.yml` invokes the published
-   `whoff77/shorky@v1.2.0` GitHub Action, which:
+   `whoff77/shorky@v1.3.0` GitHub Action, which:
    - Parses the Playwright JSON report (`test-results/report.json`) to find
      failed tests and their `trace.zip` / screenshot / visual-diff
      attachments.
-   - Sends the failure context to an LLM (via `OPENAI_API_KEY`) to generate
-     a corrected spec for each failing file, overwriting the original spec
-     file in-place so the healing branch's CI run passes.
+   - For DOM/locator failures (`broken-login.spec.ts`,
+     `broken-dynamic-form.spec.ts`): sends the failure context to an LLM
+     (via `OPENAI_API_KEY`) to generate a corrected spec, overwriting the
+     original spec file in-place so the healing branch's CI run passes.
+   - For visual regression failures (`visual-login.spec.ts`): **bypasses
+     LLM code generation entirely** ("Visual Diff Handoff" mode) since a
+     genuine pixel discrepancy can never be fixed by rewriting selectors —
+     instead, the expected/actual/diff PNG paths are packaged directly into
+     the PR description under a **[Visual Review Required]** section for a
+     human to review and either accept the new UI or fix the regression.
    - Commits all healed fixes from the run onto a single shared branch
      (`shorky/auto-heal-fixes`) and opens **one consolidated pull request**
-     covering every failure, rather than a separate PR per failing test.
-     Re-running the workflow updates the existing open PR instead of
-     opening a duplicate.
+     covering every failure — code fixes and visual-review flags alike —
+     rather than a separate PR per failing test. Re-running the workflow
+     updates the existing open PR instead of opening a duplicate.
 
 ## Prerequisites
 
@@ -75,7 +82,7 @@ See [`.github/workflows/test.yml`](.github/workflows/test.yml):
 1. Checks out the repo and installs dependencies + Chromium.
 2. Runs `npx playwright test --reporter=json,list`, writing
    `test-results/report.json`.
-3. On failure, runs `whoff77/shorky@v1.2.0` with `openai-api-key` and
+3. On failure, runs `whoff77/shorky@v1.3.0` with `openai-api-key` and
    `github-token` inputs to trigger the auto-healing pull request.
 4. Always uploads the Playwright HTML report as a build artifact.
 

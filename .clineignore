@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Playwright test artifacts / reports
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+playwright/.auth/
+
+# Committed baseline snapshot images (binary, not useful as text context)
+tests/**/*-snapshots/
+
+# Trace logs
+*.trace.json
+
+# Environment & secrets
+.env
+
+# Misc
+.DS_Store
+.git/

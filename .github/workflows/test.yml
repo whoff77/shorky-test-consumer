@@ -53,7 +53,7 @@ jobs:
       # 2. On failure, invoke the published Shorky marketplace action
       - name: Run Shorky Auto-Healer
         if: failure()
-        uses: whoff77/shorky@v1.3.5
+        uses: whoff77/shorky@v1.3.6
         with:
           shorky-cloud-url: ${{ env.SHORKY_CLOUD_URL }}
           shorky-cloud-api-key: ${{ env.SHORKY_CLOUD_API_KEY }}

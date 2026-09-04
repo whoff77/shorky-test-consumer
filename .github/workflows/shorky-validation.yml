@@ -29,12 +29,9 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     env:
-      # Shorky Cloud telemetry target. SHORKY_API_KEY is the canonical secret
-      # name for this validation workflow; it is mapped into the
-      # `shorky-cloud-api-key` action input (== SHORKY_CLOUD_API_KEY inside
-      # the composite action) below.
+      # Shorky Cloud telemetry target.
       SHORKY_CLOUD_URL: ${{ vars.SHORKY_CLOUD_URL || 'https://shorky-cloud.vercel.app/api/v1/telemetry' }}
-      SHORKY_API_KEY: ${{ secrets.SHORKY_API_KEY }}
+      SHORKY_CLOUD_API_KEY: ${{ secrets.SHORKY_CLOUD_API_KEY }}
       # Target repository context Shorky's CLI reads to open the
       # consolidated healing PR against the correct repo/branch.
       GITHUB_REPOSITORY: ${{ github.repository }}
@@ -66,10 +63,10 @@ jobs:
           echo "🔎 Validating Shorky environment/context injection..."
           missing=0
 
-          if [ -z "$SHORKY_API_KEY" ]; then
-            echo "⚠️  SHORKY_API_KEY is not set — shorky-cloud telemetry dispatch will be skipped (non-fatal, but should be configured for full validation coverage)."
+          if [ -z "$SHORKY_CLOUD_API_KEY" ]; then
+            echo "⚠️  SHORKY_CLOUD_API_KEY is not set — shorky-cloud telemetry dispatch will be skipped (non-fatal, but should be configured for full validation coverage)."
           else
-            echo "✅ SHORKY_API_KEY is present."
+            echo "✅ SHORKY_CLOUD_API_KEY is present."
           fi
 
           if [ -z "$SHORKY_CLOUD_URL" ]; then
@@ -126,7 +123,7 @@ jobs:
         uses: whoff77/shorky@v1.3.7
         with:
           shorky-cloud-url: ${{ env.SHORKY_CLOUD_URL }}
-          shorky-cloud-api-key: ${{ env.SHORKY_API_KEY }}
+          shorky-cloud-api-key: ${{ env.SHORKY_CLOUD_API_KEY }}
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           report-path: "test-results/report.json"

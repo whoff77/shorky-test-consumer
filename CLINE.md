@@ -2,33 +2,23 @@
 
 ## Project Overview
 
-`shorky-test-consumer` is a **minimal sample Playwright + TypeScript project** used to validate the [`shorky`](https://github.com/whoff77/shorky) AI-powered auto-healing GitHub Action end-to-end, consuming it as a published marketplace action (`whoff77/shorky@v1.3.3`). It runs a small Playwright suite against a public demo site (`the-internet.herokuapp.com`) with **three intentionally broken spec files**, each exercising a different failure category Shorky must be able to heal:
+`shorky-test-consumer` is a **minimal sample Playwright + TypeScript project** used to validate the [`shorky`](https://github.com/whoff77/shorky) AI-powered auto-healing GitHub Action end-to-end, consuming it as a published marketplace action (`whoff77/shorky@v1.3.7`). It runs a single Playwright suite (`tests/shorky-validation/`) against a public demo site (`the-internet.herokuapp.com`) with **four spec files**, each exercising a different category Shorky must be able to handle:
 
-- `tests/broken-login.spec.ts` — DOM interaction failure (locators reference nonexistent `XXXUsername` / `XXXPassword` labels).
-- `tests/broken-dynamic-form.spec.ts` — DOM interaction failure (targets a nonexistent `#checkbox-1` id on the Checkboxes demo page).
-- `tests/visual-login.spec.ts` — visual regression failure (injects a deliberate visual discrepancy via `page.evaluate` before comparing against a committed baseline snapshot).
+- `tests/shorky-validation/broken-login-flow.spec.ts` — DOM interaction failure (stale locators `#user-name` / `#pass-word`; the real ids are `#username` / `#password`).
+- `tests/shorky-validation/dynamic-form-elements.spec.ts` — semantic action-contract errors (`.fill()` on a `<select>`/checkbox instead of `.selectOption()` / `.check()`) to verify the LLM diagnostics correct the *action*, not just the selector.
+- `tests/shorky-validation/visual-regression-check.spec.ts` — visual regression failure (injects a deliberate visual discrepancy via `page.evaluate` before comparing against a committed baseline snapshot on the dropdown page).
+- `tests/shorky-validation/clean-happy-path.spec.ts` — a fully passing negative-control spec that must never trigger a healing fix or false PR participation.
 
-When the suite fails in CI, `.github/workflows/test.yml` invokes the published Shorky action, which parses the Playwright JSON report, resolves failed specs/traces, and either LLM-generates a code fix (DOM failures) or packages a "Visual Review Required" section into a PR (visual regression). All fixes land on a single shared branch (`shorky/auto-heal-fixes`) via one consolidated pull request.
+When the suite fails in CI, `.github/workflows/test.yml` runs the suite with `continue-on-error: true` (so every intentionally-broken spec runs to completion and all failures accumulate into a single Playwright JSON report), then invokes the published Shorky action, which parses the report, resolves failed specs/traces, and either LLM-generates a code fix (DOM/semantic failures) or packages a "Visual Review Required" section into a PR (visual regression). All fixes land on a single shared branch (`shorky/auto-heal-fixes`) via one consolidated pull request, sharing one `suiteRunId`.
 
 This repo exists purely to exercise the CI healing flow — **`npm test` is expected to fail locally on purpose.**
-
-### `tests/shorky-validation/` — comprehensive end-to-end validation suite
-
-A second, more comprehensive suite dedicated to validating the auto-healing engine, batching logic, visual regression handling, and telemetry integration end-to-end, run by `.github/workflows/shorky-validation.yml`:
-
-- `broken-login-flow.spec.ts` — outdated/broken locators (`#user-name` / `#pass-word` instead of the real `#username` / `#password`) for Shorky to inspect, heal, and submit via the CLI.
-- `dynamic-form-elements.spec.ts` — semantic action-contract errors (`.fill()` on a `<select>`/checkbox instead of `.selectOption()` / `.check()`) to verify the LLM diagnostics correct the *action*, not just the selector.
-- `visual-regression-check.spec.ts` — a visual snapshot test (dropdown page) designed to trigger a pixel mismatch, confirming Shorky logs the visual failure via the "Visual Diff Handoff" path without attempting an incorrect code mutation.
-- `clean-happy-path.spec.ts` — a fully passing negative-control spec that must never trigger a healing fix or false PR participation.
-
-The `shorky-validation.yml` workflow runs this suite with `continue-on-error: true` so every failure accumulates into a single Playwright JSON report, then immediately invokes the Shorky CLI against that one report so all fixes/visual-diff flags share a single `suiteRunId` and land in one consolidated PR.
 
 ## Tech Stack & Core Tools
 
 - **Language/Runtime:** TypeScript, Node.js
 - **Test/Automation Engine:** Playwright (`@playwright/test`)
 - **Target under test:** public demo site `https://the-internet.herokuapp.com` (configured as `baseURL`)
-- **CI integration under test:** `whoff77/shorky@v1.3.3` GitHub Action (composite action from the sibling `shorky` repo)
+- **CI integration under test:** `whoff77/shorky@v1.3.7` GitHub Action (composite action from the sibling `shorky` repo)
 - **Optional telemetry integration:** `shorky-cloud` (via `SHORKY_CLOUD_URL` / `SHORKY_CLOUD_API_KEY`)
 - No build step, database, or backend — this is a pure Playwright test fixture project.
 
@@ -46,7 +36,7 @@ npm test               # -> playwright test
 npm run test:headed    # -> playwright test --headed
 
 # Run a single spec / project directly
-npx playwright test tests/broken-login.spec.ts --project="Google Chrome"
+npx playwright test tests/shorky-validation/broken-login-flow.spec.ts --project="Google Chrome"
 ```
 
 There is no lint, typecheck, or build script defined in `package.json`; `tsconfig.json` is used for editor/type-checking support only (`noEmit: true`).
@@ -58,9 +48,10 @@ There is no lint, typecheck, or build script defined in `package.json`; `tsconfi
 
 ## Architecture & Conventions
 
-- **`tests/broken-login.spec.ts` / `tests/broken-dynamic-form.spec.ts`** — deliberately broken DOM-locator specs. When "fixing" these, the point is to observe/validate Shorky's auto-heal PR, not to hand-fix them directly unless testing a regression in Shorky itself.
-- **`tests/visual-login.spec.ts`** — captures a screenshot after intentionally corrupting the UI, comparing against `tests/visual-login.spec.ts-snapshots/login-page-baseline.png`. Playwright's `snapshotPathTemplate` in `playwright.config.ts` deliberately omits the OS-specific suffix so the macOS-captured baseline is still compared pixel-for-pixel against Linux CI runs (keeps it a genuine pixel-diff failure, not a "missing snapshot").
+- **`tests/shorky-validation/broken-login-flow.spec.ts` / `dynamic-form-elements.spec.ts`** — deliberately broken DOM-locator / semantic action-contract specs. When "fixing" these, the point is to observe/validate Shorky's auto-heal PR, not to hand-fix them directly unless testing a regression in Shorky itself.
+- **`tests/shorky-validation/visual-regression-check.spec.ts`** — captures a screenshot of the dropdown page after intentionally corrupting the UI, comparing against `tests/shorky-validation/visual-regression-check.spec.ts-snapshots/dropdown-page-baseline.png`. Playwright's `snapshotPathTemplate` in `playwright.config.ts` deliberately omits the OS-specific suffix so the macOS-captured baseline is still compared pixel-for-pixel against Linux CI runs (keeps it a genuine pixel-diff failure, not a "missing snapshot").
+- **`tests/shorky-validation/clean-happy-path.spec.ts`** — negative control; must never be touched by the auto-healer or contribute to the batch report.
 - **`playwright.config.ts`** — single browser project (`Google Chrome`), `trace: 'retain-on-failure'` and `screenshot: 'only-on-failure'` so Shorky's fixer always has a trace.zip + screenshot to work from; JSON reporter writes to `test-results/report.json` (the path the Shorky action expects via `report-path`).
-- **`.github/workflows/test.yml`** — runs on push/PR to `main`; installs deps + Chromium, runs the suite, and on failure invokes `whoff77/shorky@v1.3.3` with the report path, then always uploads the HTML report and raw `test-results/` (traces, screenshots, diffs) as build artifacts.
+- **`.github/workflows/test.yml`** — runs on push/PR to `main`; installs deps + Chromium, validates required env vars, runs `tests/shorky-validation` with `continue-on-error: true` so all failures batch into one report, invokes `whoff77/shorky@v1.3.7` against that report when any spec failed, then always uploads the HTML report and raw `test-results/` (traces, screenshots, diffs) as build artifacts.
 - **When updating the consumed Shorky action version:** bump the `uses: whoff77/shorky@vX.Y.Z` pin in `.github/workflows/test.yml` and mention the version in `README.md`.
 - **Repository Settings requirement:** GitHub Actions must be allowed to create and approve pull requests (Settings > Actions > General > Workflow permissions) for the auto-heal PR step to succeed.

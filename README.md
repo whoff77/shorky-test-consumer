@@ -3,38 +3,45 @@
 A minimal Node.js + TypeScript + Playwright project used to validate
 [Shorky](https://github.com/whoff77/shorky)'s AI-powered auto-healing
 GitHub Action end-to-end, consumed as a published marketplace action
-(`whoff77/shorky@v1.3.1`).
+(`whoff77/shorky@v1.3.7`).
 
 ## What this project does
 
-1. Runs a small Playwright suite against a public demo site
-   (`the-internet.herokuapp.com`).
-2. Three spec files are **intentionally broken** to exercise different
-   failure categories Shorky needs to be able to heal:
-   - `tests/broken-login.spec.ts` — **DOM interaction failure**: targets
-     locators that don't exist on the login page (`XXXUsername` /
-     `XXXPassword` labels).
-   - `tests/broken-dynamic-form.spec.ts` — **DOM interaction failure**:
-     targets a checkbox on the
-     [Checkboxes](https://the-internet.herokuapp.com/checkboxes) example
-     page via a non-existent `#checkbox-1` id (the real inputs have no
-     `id` attribute at all).
-   - `tests/visual-login.spec.ts` — **visual regression failure**: captures
-     a screenshot of the login page and compares it against a committed
-     baseline (`tests/visual-login.spec.ts-snapshots/login-page-baseline.png`),
-     but first injects an intentional visual discrepancy (a red banner and a
-     recolored login button) via `page.evaluate`, so the pixel comparison
+1. Runs the Playwright suite in `tests/shorky-validation/` against a public
+   demo site (`the-internet.herokuapp.com`).
+2. Four spec files exercise different categories Shorky needs to handle,
+   **intentionally** bundled into a single run so all failures land in one
+   batch report and one consolidated pull request:
+   - `broken-login-flow.spec.ts` — **DOM interaction failure**: targets
+     stale locators (`#user-name` / `#pass-word`) that don't exist on the
+     login page; the real ids are `#username` / `#password`.
+   - `dynamic-form-elements.spec.ts` — **semantic action-contract errors**:
+     calls `.fill()` on a native `<select>` (dropdown page) and on a
+     checkbox (checkboxes page) instead of the correct `.selectOption()` /
+     `.check()` actions.
+   - `visual-regression-check.spec.ts` — **visual regression failure**:
+     captures a screenshot of the dropdown page and compares it against a
+     committed baseline
+     (`tests/shorky-validation/visual-regression-check.spec.ts-snapshots/dropdown-page-baseline.png`),
+     but first injects an intentional visual discrepancy (a red banner and
+     a recolored control) via `page.evaluate`, so the pixel comparison
      reliably fails with a real image diff.
-3. When the suite fails, `.github/workflows/test.yml` invokes the published
-   `whoff77/shorky@v1.3.1` GitHub Action, which:
+   - `clean-happy-path.spec.ts` — a **fully passing negative control**:
+     correct locators and action contracts throughout, ensuring baseline
+     assertions remain untouched and never trigger a false healing fix or
+     PR participation.
+3. When one or more specs fail, `.github/workflows/test.yml` invokes the
+   published `whoff77/shorky@v1.3.7` GitHub Action, which:
+
    - Parses the Playwright JSON report (`test-results/report.json`) to find
      failed tests and their `trace.zip` / screenshot / visual-diff
      attachments.
-   - For DOM/locator failures (`broken-login.spec.ts`,
-     `broken-dynamic-form.spec.ts`): sends the failure context to an LLM
-     (via `OPENAI_API_KEY`) to generate a corrected spec, overwriting the
-     original spec file in-place so the healing branch's CI run passes.
-   - For visual regression failures (`visual-login.spec.ts`): **bypasses
+   - For DOM/locator and semantic action-contract failures
+     (`broken-login-flow.spec.ts`, `dynamic-form-elements.spec.ts`): sends
+     the failure context to an LLM (via `OPENAI_API_KEY`) to generate a
+     corrected spec, overwriting the original spec file in-place so the
+     healing branch's CI run passes.
+   - For visual regression failures (`visual-regression-check.spec.ts`): **bypasses
      LLM code generation entirely** ("Visual Diff Handoff" mode) since a
      genuine pixel discrepancy can never be fixed by rewriting selectors —
      instead, the expected/actual/diff PNG paths are packaged directly into
@@ -80,11 +87,19 @@ locally.
 See [`.github/workflows/test.yml`](.github/workflows/test.yml):
 
 1. Checks out the repo and installs dependencies + Chromium.
-2. Runs `npx playwright test --reporter=json,list`, writing
-   `test-results/report.json`.
-3. On failure, runs `whoff77/shorky@v1.3.1` with `openai-api-key` and
-   `github-token` inputs to trigger the auto-healing pull request.
-4. Always uploads the Playwright HTML report as a build artifact.
+2. Validates that required Shorky environment variables (`SHORKY_CLOUD_URL`,
+   `SHORKY_CLOUD_API_KEY`, `GITHUB_REPOSITORY`, `GITHUB_TOKEN`) are present.
+3. Runs `npx playwright test tests/shorky-validation --project="Google Chrome"`
+   with `continue-on-error: true`, writing `test-results/report.json`, so
+   every intentionally-broken spec runs to completion and all failures
+   accumulate into one batch report instead of the job stopping at the
+   first failure.
+4. If any spec failed, runs `whoff77/shorky@v1.3.7` with `openai-api-key`,
+   `shorky-cloud-api-key`, and `github-token` inputs against that single
+   report to trigger the consolidated auto-healing pull request, then
+   surfaces the true pass/fail status of the run.
+5. Always uploads the Playwright HTML report and raw `test-results/`
+   (traces, screenshots, diffs) as build artifacts.
 
 ## Project structure
 
@@ -92,13 +107,15 @@ See [`.github/workflows/test.yml`](.github/workflows/test.yml):
 shorky-test-consumer/
 ├── .github/
 │   └── workflows/
-│       └── test.yml                    # CI: run Playwright + Shorky auto-healer
+│       └── test.yml                              # CI: run Playwright + Shorky auto-healer
 ├── tests/
-│   ├── broken-login.spec.ts            # DOM interaction failure (broken locators)
-│   ├── broken-dynamic-form.spec.ts     # DOM interaction failure (checkboxes page)
-│   ├── visual-login.spec.ts            # Visual regression failure (screenshot diff)
-│   └── visual-login.spec.ts-snapshots/
-│       └── login-page-baseline.png     # Committed clean baseline snapshot
+│   └── shorky-validation/
+│       ├── broken-login-flow.spec.ts             # DOM interaction failure (stale locators)
+│       ├── dynamic-form-elements.spec.ts         # Semantic action-contract errors (select/checkbox)
+│       ├── visual-regression-check.spec.ts       # Visual regression failure (screenshot diff)
+│       ├── clean-happy-path.spec.ts              # Fully passing negative control
+│       └── visual-regression-check.spec.ts-snapshots/
+│           └── dropdown-page-baseline.png        # Committed clean baseline snapshot
 ├── playwright.config.ts      # Playwright configuration (trace: retain-on-failure)
 ├── tsconfig.json
 └── package.json

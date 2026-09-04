@@ -17,14 +17,24 @@ export default defineConfig({
   /* Run tests in files in parallel */
   fullyParallel: true,
 
+  /* Establishes a single shared SHORKY_RUN_ID (see global-setup.ts) before
+   * Playwright forks any worker process, so every worker — and the Shorky
+   * CLI step that runs afterwards — shares the exact same run identifier. */
+  globalSetup: require.resolve('./global-setup'),
+
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
 
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
 
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  /* Run with multiple parallel workers (including on CI) now that a single
+   * shared run identifier (SHORKY_RUN_ID, minted in global-setup.ts) is
+   * established up front and inherited by every worker process, so
+   * parallel execution no longer fragments Shorky's batch/telemetry
+   * grouping. Defaults to Playwright's automatic worker count; override via
+   * the standard `PW_TEST_WORKERS`/`--workers` if a fixed count is needed. */
+  workers: process.env.CI ? 2 : undefined,
 
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [

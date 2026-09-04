@@ -9,7 +9,7 @@ GitHub Action end-to-end, consumed as a published marketplace action
 
 1. Runs the Playwright suite in `tests/shorky-validation/` against a public
    demo site (`the-internet.herokuapp.com`).
-2. Four spec files exercise different categories Shorky needs to handle,
+2. Six spec files exercise different categories Shorky needs to handle,
    **intentionally** bundled into a single run so all failures land in one
    batch report and one consolidated pull request:
    - `broken-login-flow.spec.ts` — **DOM interaction failure**: targets
@@ -19,13 +19,28 @@ GitHub Action end-to-end, consumed as a published marketplace action
      calls `.fill()` on a native `<select>` (dropdown page) and on a
      checkbox (checkboxes page) instead of the correct `.selectOption()` /
      `.check()` actions.
+   - `custom-dropdown-interaction.spec.ts` — **custom (non-native) dropdown
+     interaction mismatch**: builds a bare-bones button/list "combobox"
+     widget in-page (no `<select>`/`<option>` elements at all) and calls
+     `.fill()` on its trigger `<button>` instead of clicking the trigger and
+     then the desired `<li role="option">` item — a distinct interaction
+     contract from the native `<select>` case above.
+   - `canonical-value-mismatch.spec.ts` — **colloquial string vs. canonical
+     selection value mismatch**: uses the *correct* `.selectOption()`
+     action contract against an in-page native `<select>` country picker,
+     but supplies a colloquial abbreviation (`"USA"`) that matches neither
+     the option's canonical `value` (`"US"`) nor its full visible label
+     (`"United States"`), producing a genuine "no matching option" timeout.
    - `visual-regression-check.spec.ts` — **visual regression failure**:
      captures a screenshot of the dropdown page and compares it against a
      committed baseline
      (`tests/shorky-validation/visual-regression-check.spec.ts-snapshots/dropdown-page-baseline.png`),
      but first injects an intentional visual discrepancy (a red banner and
      a recolored control) via `page.evaluate`, so the pixel comparison
-     reliably fails with a real image diff.
+     reliably fails with a real image diff. This is the suite's only
+     visual-regression spec — additional pixel-diff specs are intentionally
+     avoided to keep the suite lightweight and immune to cross-environment
+     rendering flakes.
    - `clean-happy-path.spec.ts` — a **fully passing negative control**:
      correct locators and action contracts throughout, ensuring baseline
      assertions remain untouched and never trigger a false healing fix or
@@ -37,9 +52,10 @@ GitHub Action end-to-end, consumed as a published marketplace action
      failed tests and their `trace.zip` / screenshot / visual-diff
      attachments.
    - For DOM/locator and semantic action-contract failures
-     (`broken-login-flow.spec.ts`, `dynamic-form-elements.spec.ts`): sends
-     the failure context to an LLM (via `OPENAI_API_KEY`) to generate a
-     corrected spec, overwriting the original spec file in-place so the
+     (`broken-login-flow.spec.ts`, `dynamic-form-elements.spec.ts`,
+     `custom-dropdown-interaction.spec.ts`, `canonical-value-mismatch.spec.ts`):
+     sends the failure context to an LLM (via `OPENAI_API_KEY`) to generate
+     a corrected spec, overwriting the original spec file in-place so the
      healing branch's CI run passes.
    - For visual regression failures (`visual-regression-check.spec.ts`): **bypasses
      LLM code generation entirely** ("Visual Diff Handoff" mode) since a
@@ -112,6 +128,8 @@ shorky-test-consumer/
 │   └── shorky-validation/
 │       ├── broken-login-flow.spec.ts             # DOM interaction failure (stale locators)
 │       ├── dynamic-form-elements.spec.ts         # Semantic action-contract errors (select/checkbox)
+│       ├── custom-dropdown-interaction.spec.ts   # Custom (non-native) dropdown widget interaction mismatch
+│       ├── canonical-value-mismatch.spec.ts      # Colloquial vs. canonical selection value mismatch
 │       ├── visual-regression-check.spec.ts       # Visual regression failure (screenshot diff)
 │       ├── clean-happy-path.spec.ts              # Fully passing negative control
 │       └── visual-regression-check.spec.ts-snapshots/

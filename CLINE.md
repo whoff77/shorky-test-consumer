@@ -12,6 +12,17 @@ When the suite fails in CI, `.github/workflows/test.yml` invokes the published S
 
 This repo exists purely to exercise the CI healing flow — **`npm test` is expected to fail locally on purpose.**
 
+### `tests/shorky-validation/` — comprehensive end-to-end validation suite
+
+A second, more comprehensive suite dedicated to validating the auto-healing engine, batching logic, visual regression handling, and telemetry integration end-to-end, run by `.github/workflows/shorky-validation.yml`:
+
+- `broken-login-flow.spec.ts` — outdated/broken locators (`#user-name` / `#pass-word` instead of the real `#username` / `#password`) for Shorky to inspect, heal, and submit via the CLI.
+- `dynamic-form-elements.spec.ts` — semantic action-contract errors (`.fill()` on a `<select>`/checkbox instead of `.selectOption()` / `.check()`) to verify the LLM diagnostics correct the *action*, not just the selector.
+- `visual-regression-check.spec.ts` — a visual snapshot test (dropdown page) designed to trigger a pixel mismatch, confirming Shorky logs the visual failure via the "Visual Diff Handoff" path without attempting an incorrect code mutation.
+- `clean-happy-path.spec.ts` — a fully passing negative-control spec that must never trigger a healing fix or false PR participation.
+
+The `shorky-validation.yml` workflow runs this suite with `continue-on-error: true` so every failure accumulates into a single Playwright JSON report, then immediately invokes the Shorky CLI against that one report so all fixes/visual-diff flags share a single `suiteRunId` and land in one consolidated PR.
+
 ## Tech Stack & Core Tools
 
 - **Language/Runtime:** TypeScript, Node.js

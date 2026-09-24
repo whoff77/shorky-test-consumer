@@ -29,7 +29,6 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     env:
-      SHORKY_CLOUD_URL: ${{ vars.SHORKY_CLOUD_URL || 'https://shorky-cloud.vercel.app/api/v1/telemetry' }}
       SHORKY_CLOUD_API_KEY: ${{ secrets.SHORKY_CLOUD_API_KEY }}
       # Target repository context Shorky's CLI reads to open the
       # consolidated healing PR against the correct repo/branch.
@@ -121,7 +120,7 @@ jobs:
       # consolidated pull request rather than one PR per failing spec.
       - name: Run Shorky Auto-Healer
         if: steps.run_tests.outcome == 'failure'
-        uses: whoff77/shorky@v1.3.14
+        uses: whoff77/shorky@v0.1.0
         with:
           shorky-cloud-url: ${{ env.SHORKY_CLOUD_URL }}
           shorky-cloud-api-key: ${{ env.SHORKY_CLOUD_API_KEY }}

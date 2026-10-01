@@ -122,7 +122,7 @@ jobs:
       # consolidated pull request rather than one PR per failing spec.
       - name: Run Shorky Auto-Healer
         if: steps.run_tests.outcome == 'failure'
-        uses: whoff77/shorky@v0.1.6
+        uses: whoff77/shorky@v0.1.7
         with:
           shorky-cloud-api-key: ${{ env.SHORKY_CLOUD_API_KEY }}
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}

@@ -86,7 +86,7 @@ jobs:
       # enabled — this is the behavior under test in this workflow.
       - name: Run Shorky Auto-Healer (Auto-Accept Visual Baselines enabled)
         if: steps.run_tests.outcome == 'failure'
-        uses: whoff77/shorky@v0.1.7
+        uses: whoff77/shorky@v0.1.8
         with:
           shorky-cloud-api-key: ${{ env.SHORKY_CLOUD_API_KEY }}
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
